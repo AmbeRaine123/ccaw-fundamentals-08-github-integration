@@ -343,6 +343,123 @@ to src/utils/auth-utils.ts last week.
 
 ---
 
+### Example 12: Issue Triage
+
+**Issue Title:** [Bug] App crashes on checkout when cart has >20 items
+
+**Issue Body:**
+```
+## Describe the bug
+The checkout page crashes with a white screen when the cart contains
+more than 20 items. This seems to have started after the last deploy.
+
+## Steps to reproduce
+1. Add 21+ items to the cart
+2. Navigate to /checkout
+3. Page goes blank
+
+## Environment
+- Browser: Chrome 124
+- OS: macOS 14
+```
+
+**Comment:**
+```
+@claude can you triage this issue? Identify the likely cause, check
+if there's a related issue or PR, and suggest a priority label.
+```
+
+**Claude's Response:**
+```
+### Triage Report
+
+**Likely Cause:**
+The crash is likely a rendering error in the checkout component when
+the items array exceeds an expected size. Candidate areas:
+
+- `src/pages/Checkout.tsx` — possible index-out-of-bounds or
+  unhandled empty state when mapping over >20 items
+- `src/hooks/useCart.ts` — pagination or slice logic that truncates
+  the array and causes a null dereference downstream
+
+**Related Issues / PRs:**
+- #47 "Checkout fails for large orders" (closed 3 months ago —
+  partially related, different root cause)
+- PR #83 "Refactor cart state management" merged 2 days ago —
+  likely the regression source based on timing
+
+**Suggested Labels:**
+- `bug` ✓
+- `priority: high` — checkout is a critical user path
+- `regression` — behavior changed after a recent merge
+
+**Recommended Next Steps:**
+1. Confirm with `git bisect` that PR #83 introduced the regression
+2. Add a guard in `Checkout.tsx` for carts with >20 items
+3. Add a test case: render `<Checkout>` with 25 cart items
+
+Would you like me to implement the fix?
+```
+
+---
+
+### Example 13: CI Fix
+
+**Issue Title:** CI failing on main — TypeScript errors in `api/users.ts`
+
+**Issue Body:**
+```
+The build has been red on main since this morning. Blocking all merges.
+
+CI output:
+```
+src/api/users.ts(34,12): error TS2345:
+  Argument of type 'string | undefined' is not assignable to
+  parameter of type 'string'.
+src/api/users.ts(61,5): error TS2339:
+  Property 'createdAt' does not exist on type 'UserRecord'.
+```
+
+The errors appeared after #91 was merged (added optional fields to
+the User type).
+```
+
+**Comment:**
+```
+@claude please fix the CI. Don't change the type definitions — only
+update the call sites to handle the new optional fields safely.
+```
+
+**Claude's Response:**
+```
+I'll fix the TypeScript errors without modifying the type definitions.
+
+Plan:
+- [ ] Read src/api/users.ts to understand the failing lines
+- [ ] Fix line 34: add a null guard before passing the optional string
+- [ ] Fix line 61: update the field reference to match the new type
+- [ ] Verify no other call sites have the same issue
+
+Starting now...
+
+---
+
+**Fix for line 34** (`string | undefined` → `string`):
+Added an early return when the value is undefined:
+```ts
+if (!userId) return res.status(400).json({ error: 'userId required' });
+```
+
+**Fix for line 61** (`createdAt` → `created_at`):
+The field was renamed in #91. Updated reference to `record.created_at`.
+
+**Scan results:** No other files reference `createdAt` on `UserRecord`.
+
+Pushing fix — CI should go green shortly.
+```
+
+---
+
 ## Quick Reference
 
 ### Common @claude Commands
